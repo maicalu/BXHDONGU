@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BXH ĐỘ NGU</title>
+    <style>
+        /* Dark Theme & Reset */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Tiêu đề */
+        h1 {
+            font-size: 4rem;
+            margin-top: 40px;
+            margin-bottom: 60px;
+            color: #ff4757;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px rgba(255, 71, 87, 0.6);
+            letter-spacing: 3px;
+        }
+
+        /* Vùng chứa các cột */
+        .leaderboard {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 40px;
+            height: 450px; /* Chiều cao cố định để cột mọc lên */
+            padding-bottom: 20px;
+            position: relative;
+        }
+
+        /* Thiết kế từng người */
+        .person {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            width: 120px;
+            transition: order 0.6s ease; /* Hiệu ứng mượt khi đổi vị trí */
+        }
+
+        /* Điểm số */
+        .score {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #a4b0be;
+            transition: color 0.3s;
+        }
+
+        /* Cột */
+        .bar {
+            width: 100%;
+            height: 50px; /* Chiều cao mặc định */
+            background: linear-gradient(to top, #2f3542, #57606f);
+            border-radius: 15px 15px 0 0;
+            transition: height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s, background 0.4s;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Tên */
+        .name {
+            margin-top: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        /* Nút bấm cộng điểm */
+        .add-btn {
+            margin-top: 20px;
+            padding: 12px 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: white;
+            background-color: #3742fa;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        .add-btn:active {
+            transform: translateY(4px);
+            background-color: #5352ed;
+        }
+
+        /* === HIỆU ỨNG TOP 1 === */
+        .rank-1 .bar {
+            background: linear-gradient(to top, #ffa502, #eccc68);
+            box-shadow: 0 0 40px 15px rgba(255, 165, 2, 0.7);
+            z-index: 20;
+        }
+        .rank-1 .score {
+            color: #eccc68;
+            text-shadow: 0 0 10px rgba(236, 204, 104, 0.8);
+            transform: scale(1.3);
+        }
+        .rank-1 .name {
+            color: #eccc68;
+        }
+
+        /* === HIỆU ỨNG NHẢY KHI BẤM === */
+        @keyframes jumpEffect {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-50px); } /* Cột nảy lên 50px */
+            100% { transform: translateY(0); }
+        }
+        .jumping .bar {
+            animation: jumpEffect 0.3s ease-in-out;
+        }
+
+        /* Nút Reset */
+        #reset-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background-color: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4);
+            transition: all 0.2s;
+        }
+        #reset-btn:hover {
+            background-color: #ff6b81;
+            transform: scale(1.05);
+        }
+        #reset-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>BXH ĐỘ NGU</h1>
+
+    <div class="leaderboard" id="leaderboard">
+        </div>
+
+    <button id="reset-btn" onclick="resetAll()">Reset Về 0</button>
+
+    <script>
+        // Dữ liệu ban đầu
+        let people = [
+            { id: 'p1', name: 'Linh', score: 0 },
+            { id: 'p2', name: 'Mai', score: 0 },
+            { id: 'p3', name: 'Đan Lê', score: 0 },
+            { id: 'p4', name: 'Hiền Lê', score: 0 }
+        ];
+
+        // Sắp xếp layout để Top 1 (Order 2) luôn ở giữa trong số 4 cột
+        // Thứ tự ưu tiên hiển thị từ trái qua phải: Hạng 2, Hạng 1 (giữa), Hạng 3, Hạng 4
+        const orderMap = [2, 1, 3, 4]; 
+        
+        const container = document.getElementById('leaderboard');
+
+        // Hàm khởi tạo giao diện lần đầu
+        function initDOM() {
+            container.innerHTML = '';
+            people.forEach(p => {
+                const col = document.createElement('div');
+                col.className = 'person';
+                col.id = p.id;
+
+                col.innerHTML = `
+                    <div class="score">0</div>
+                    <div class="bar"></div>
+                    <div class="name">${p.name}</div>
+                    <button class="add-btn" onclick="addScore('${p.id}')">+ NGU</button>
+                `;
+                container.appendChild(col);
+            });
+            updateLeaderboard();
+        }
+
+        // Hàm cập nhật điểm, độ cao cột và vị trí
+        function updateLeaderboard() {
+            // Sắp xếp mảng theo điểm giảm dần (ngu nhất lên đầu)
+            const sortedPeople = [...people].sort((a, b) => b.score - a.score);
+            const highestScore = sortedPeople[0].score;
+
+            people.forEach(p => {
+                const el = document.getElementById(p.id);
+                // Tìm hạng thực sự của người này
+                const rank = sortedPeople.findIndex(s => s.id === p.id);
+
+                // Cập nhật text điểm số
+                el.querySelector('.score').innerText = p.score;
+
+                // Cập nhật chiều cao (Tối thiểu 50px, mỗi điểm +25px)
+                const bar = el.querySelector('.bar');
+                bar.style.height = (50 + p.score * 25) + 'px';
+
+                // Đổi vị trí dựa trên hạng
+                el.style.order = orderMap[rank];
+
+                // Cấp ánh hào quang vàng cho top 1 (chỉ khi có điểm > 0)
+                if (rank === 0 && p.score > 0 && p.score === highestScore) {
+                    el.classList.add('rank-1');
+                } else {
+                    el.classList.remove('rank-1');
+                }
+            });
+        }
+
+        // Hàm xử lý khi bấm nút "NGU"
+        function addScore(id) {
+            // Tăng điểm
+            const person = people.find(p => p.id === id);
+            person.score += 1;
+
+            // Kích hoạt hiệu ứng nhảy
+            const el = document.getElementById(id);
+            el.classList.remove('jumping');
+            void el.offsetWidth; // Mẹo ép trình duyệt load lại class để chạy lại animation
+            el.classList.add('jumping');
+
+            // Cập nhật giao diện sau khi thay đổi điểm
+            updateLeaderboard();
+        }
+
+        // Hàm Reset
+        function resetAll() {
+            people.forEach(p => p.score = 0);
+            updateLeaderboard();
+        }
+
+        // Chạy lần đầu
+        initDOM();
+    </script>
+
+</body>
+</html>
